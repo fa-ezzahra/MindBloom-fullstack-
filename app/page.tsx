@@ -109,9 +109,18 @@ export default function HomePage() {
               <Link href="/about" className="text-gray-700 hover:text-green-600 transition-colors font-medium">
                 About Us
               </Link>
-              <Button variant="outline" className="border-green-200 text-green-700 hover:bg-green-50">
-                Log In
-              </Button>
+              <div className="flex items-center space-x-3">
+                <Link href="/authentification/login">
+                  <Button variant="outline" className="border-green-200 text-green-700 hover:bg-green-50">
+                    Log In
+                  </Button>
+                </Link>
+                <Link href="/authentification/sign_up">
+                  <Button className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white">
+                    Sign Up
+                  </Button>
+                </Link>
+              </div>
             </div>
 
             {/* Mobile Menu Button */}
@@ -150,15 +159,26 @@ export default function HomePage() {
             available 24/7.
           </p>
           {/* Animated Robot Button */}
-          <Link href="/start-journey">
-            <Button
-              size="lg"
-              className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
-            >
-              <Bot className="h-6 w-6 mr-3 animate-bounce group-hover:animate-pulse" />
-              <span className="text-lg font-semibold">Start Your Journey</span>
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link href="/authentification/sign_up">
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+              >
+                <Bot className="h-6 w-6 mr-3 animate-bounce group-hover:animate-pulse" />
+                <span className="text-lg font-semibold">Start Your Journey</span>
+              </Button>
+            </Link>
+            <Link href="/authentification/login">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-2 border-green-500 text-green-600 hover:bg-green-50 px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+              >
+                <span className="text-lg font-semibold">I Already Have an Account</span>
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Platform Information */}
@@ -169,195 +189,71 @@ export default function HomePage() {
               <p className="text-gray-600 text-lg leading-relaxed mb-6">
                 MindBloom combines evidence-based cognitive behavioral therapy techniques with modern technology to
                 provide accessible mental health support. Our platform offers a safe, judgment-free space where you can
-                explore your thoughts, track your progress, and develop healthy coping strategies.
+                explore your thoughts, track your progress, and engage with exercises designed to help you heal and
+                thrive.
               </p>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-gray-700">24/7 AI-powered support</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-gray-700">Evidence-based CBT techniques</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                  <span className="text-gray-700">Private and secure environment</span>
-                </div>
-              </div>
+              <ul className="list-disc list-inside text-gray-600 space-y-2">
+                <li>Personalized mood tracking and journaling tools</li>
+                <li>Access to calming music and relaxation techniques</li>
+                <li>Interactive CBT-based exercises and insights</li>
+                <li>24/7 chatbot support tailored to your needs</li>
+                <li>Secure and confidential environment</li>
+              </ul>
             </div>
-            <div className="relative">
-              <div className="aspect-square bg-gradient-to-br from-green-200 to-blue-200 rounded-2xl flex items-center justify-center max-w-xs mx-auto">
-                <div className="text-center">
-                  <Brain className="h-16 w-16 text-green-600 mx-auto mb-3" />
-                  <p className="text-gray-700 font-medium text-sm">Your wellness journey</p>
-                </div>
-              </div>
+            <div className="flex justify-center md:justify-end">
+              <img
+                src="/assets/mental-health-illustration.png"
+                alt="Mental Health Illustration"
+                className="w-64 h-auto rounded-xl shadow-md"
+                loading="lazy"
+              />
             </div>
           </div>
         </div>
 
         {/* Services Section */}
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-800 mb-4">Our Services</h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Explore our range of tools designed to support your mental wellness journey
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-20">
-          {services.map((service, index) => (
-            <Card
-              key={index}
-              className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-0 bg-white/70 backdrop-blur-sm overflow-hidden"
-            >
-              <CardHeader className={`bg-gradient-to-br ${service.color} pb-6`}>
-                <div className={`${service.iconColor} mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                  {service.icon}
-                </div>
-                <CardTitle className="text-lg font-bold text-gray-800">{service.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <CardDescription className="text-gray-600 text-sm leading-relaxed mb-4">
-                  {service.description}
-                </CardDescription>
-                <Link href={service.href}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full group-hover:bg-gradient-to-r group-hover:from-green-500 group-hover:to-blue-500 group-hover:text-white group-hover:border-transparent transition-all duration-300"
+        <section>
+          <h3 className="text-4xl font-bold mb-12 text-center text-gray-800">Explore Our Services</h3>
+          <div className="grid gap-8 md:grid-cols-3">
+            {services.map((service, index) => (
+              <Card
+                key={index}
+                className="group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-0 bg-white/70 backdrop-blur-sm overflow-hidden"
+              >
+                <CardHeader className={`bg-gradient-to-br ${service.color} pb-6`}>
+                  <div
+                    className={`${service.iconColor} mb-4 group-hover:scale-110 transition-transform duration-300`}
                   >
-                    Explore
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* CBT Explanation Section */}
-        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl p-8 md:p-12 mb-20 border border-indigo-100">
-          <div className="text-center mb-12">
-            <Brain className="h-16 w-16 text-indigo-600 mx-auto mb-6" />
-            <h2 className="text-4xl font-bold text-gray-800 mb-4">Understanding Cognitive Behavioral Therapy</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              CBT is a proven therapeutic approach that helps you understand the connection between thoughts, feelings,
-              and behaviors
-            </p>
+                    {service.icon}
+                  </div>
+                  <CardTitle className="text-lg font-bold text-gray-800">{service.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <CardDescription className="text-gray-600 text-sm leading-relaxed mb-4">
+                    {service.description}
+                  </CardDescription>
+                  <Link href={service.href}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full group-hover:bg-gradient-to-r group-hover:from-green-500 group-hover:to-blue-500 group-hover:text-white group-hover:border-transparent transition-all duration-300"
+                    >
+                      Explore
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
-            <div className="text-center">
-              <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 h-full">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Brain className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-3">Identify Thoughts</h3>
-                <p className="text-gray-600">
-                  Learn to recognize negative thought patterns and understand how they influence your emotions and
-                  behaviors.
-                </p>
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 h-full">
-                <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Lightbulb className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-3">Challenge Beliefs</h3>
-                <p className="text-gray-600">
-                  Question and examine unhelpful thoughts, replacing them with more balanced and realistic perspectives.
-                </p>
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 h-full">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <TrendingUp className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-3">Change Behaviors</h3>
-                <p className="text-gray-600">
-                  Develop new, healthier behavioral patterns that support your mental wellness and personal growth.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white/40 backdrop-blur-sm rounded-2xl p-8">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">Why CBT Works</h3>
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <Shield className="h-6 w-6 text-green-600 mt-1 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-semibold text-gray-800">Evidence-Based</h4>
-                    <p className="text-gray-600 text-sm">
-                      Extensively researched and proven effective for anxiety and depression
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Clock className="h-6 w-6 text-blue-600 mt-1 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-semibold text-gray-800">Time-Efficient</h4>
-                    <p className="text-gray-600 text-sm">
-                      Short-term therapy with long-lasting results and practical skills
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <Users className="h-6 w-6 text-purple-600 mt-1 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-semibold text-gray-800">Collaborative</h4>
-                    <p className="text-gray-600 text-sm">
-                      You're an active participant in your healing and recovery process
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Sparkles className="h-6 w-6 text-yellow-600 mt-1 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-semibold text-gray-800">Empowering</h4>
-                    <p className="text-gray-600 text-sm">Provides tools and strategies you can use independently</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        </section>
       </main>
 
-      {/* Floating Chatbot Button */}
-      <Link href="/chatbot">
-        <Button
-          size="lg"
-          className="fixed bottom-8 right-8 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white rounded-full w-16 h-16 shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 z-50"
-          aria-label="Open Chatbot"
-        >
-          <MessageCircle className="h-8 w-8" />
-        </Button>
-      </Link>
-
-      {/* Floating Animation */}
-      <div className="fixed top-1/4 left-8 opacity-20 pointer-events-none">
-        <div className="animate-bounce">
-          <Sparkles className="h-8 w-8 text-green-400" />
+      {/* Footer */}
+      <footer className="bg-green-50 border-t border-green-100 py-10">
+        <div className="container mx-auto px-4 text-center text-green-600">
+          &copy; {new Date().getFullYear()} MindBloom. All rights reserved.
         </div>
-      </div>
-      <div className="fixed top-1/3 right-12 opacity-20 pointer-events-none">
-        <div className="animate-pulse">
-          <Brain className="h-6 w-6 text-pink-400" />
-        </div>
-      </div>
-      <div className="fixed bottom-1/4 left-12 opacity-20 pointer-events-none">
-        <div className="animate-spin" style={{ animationDuration: "8s" }}>
-          <Bot className="h-6 w-6 text-blue-400" />
-        </div>
-      </div>
+      </footer>
     </div>
   )
 }
