@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,36 +11,55 @@ export default function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')  // nouvel état message succès
+  const [isLoading, setIsLoading] = useState(false)
   const supabase = createClientComponentClient()
+  const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setSuccess('')
+    setIsLoading(true)
 
     try {
       const { data: user, error: fetchError } = await supabase
         .from('user')
-        .select('username, password')
+        .select('username, password, firstname, lastname')
         .eq('username', username)
         .single()
 
       if (fetchError || !user) {
         setError('Invalid username or password')
+        setIsLoading(false)
         return
       }
 
       if (password !== user.password) {
         setError('Invalid username or password')
+        setIsLoading(false)
         return
       }
 
-      // Auth OK => afficher message succès
-      setSuccess(`Bienvenue ${user.username} ! Connexion réussie.`)
+      // Stocker les informations utilisateur
+      const userData = {
+        username: user.username,
+        firstName: user.firstname,
+        lastName: user.lastname,
+        isAuthenticated: true,
+        loginTime: new Date().toISOString()
+      }
+
+      // Stocker dans sessionStorage (persiste pendant la session)
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('currentUser', JSON.stringify(userData))
+      }
+
+      // Redirection vers la page principale
+      router.push('/')
+
     } catch (err) {
       console.error(err)
       setError('Unexpected error. Try again.')
+      setIsLoading(false)
     }
   }
 
@@ -60,6 +80,7 @@ export default function LoginPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
+              disabled={isLoading}
             />
           </div>
 
@@ -71,14 +92,14 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={isLoading}
             />
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
-          {success && <p className="text-sm text-green-600">{success}</p>}
 
-          <Button type="submit" className="w-full">
-            Sign in
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? 'Signing in...' : 'Sign in'}
           </Button>
         </form>
       </div>

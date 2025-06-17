@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -17,10 +18,21 @@ import {
   Users,
   Shield,
   Clock,
+  LogOut,
 } from "lucide-react"
+
+interface UserData {
+  username: string
+  firstName: string
+  lastName: string
+  isAuthenticated: boolean
+  loginTime: string
+}
 
 export default function HomePage() {
   const [currentQuote, setCurrentQuote] = useState(0)
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null)
+  const router = useRouter()
 
   const inspirationalQuotes = [
     "Every day is a new beginning. Take a deep breath, smile, and start again.",
@@ -74,6 +86,22 @@ export default function HomePage() {
     },
   ]
 
+  // Vérifier l'authentification au chargement
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedUser = sessionStorage.getItem('currentUser')
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser)
+          setCurrentUser(userData)
+        } catch (error) {
+          console.error('Error parsing user data:', error)
+          sessionStorage.removeItem('currentUser')
+        }
+      }
+    }
+  }, [])
+
   // Rotate quotes every 5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
@@ -81,6 +109,15 @@ export default function HomePage() {
     }, 5000)
     return () => clearInterval(interval)
   }, [])
+
+  // Fonction de déconnexion
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('currentUser')
+    }
+    setCurrentUser(null)
+    router.push('/')
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
@@ -109,18 +146,36 @@ export default function HomePage() {
               <Link href="/about" className="text-gray-700 hover:text-green-600 transition-colors font-medium">
                 About Us
               </Link>
-              <div className="flex items-center space-x-3">
-                <Link href="/authentification/login">
-                  <Button variant="outline" className="border-green-200 text-green-700 hover:bg-green-50">
-                    Log In
+              
+              {/* Affichage conditionnel selon l'authentification */}
+              {currentUser ? (
+                <div className="flex items-center space-x-4">
+                  <span className="text-green-700 font-medium">
+                    Hi, {currentUser.firstName || currentUser.username}! 👋
+                  </span>
+                  <Button 
+                    variant="outline" 
+                    className="border-red-200 text-red-700 hover:bg-red-50"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Log Out
                   </Button>
-                </Link>
-                <Link href="/authentification/sign_up">
-                  <Button className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white">
-                    Sign Up
-                  </Button>
-                </Link>
-              </div>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  <Link href="/authentification/login">
+                    <Button variant="outline" className="border-green-200 text-green-700 hover:bg-green-50">
+                      Log In
+                    </Button>
+                  </Link>
+                  <Link href="/authentification/sign_up">
+                    <Button className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white">
+                      Sign Up
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -148,37 +203,50 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-16">
-        {/* Hero Section */}
+        {/* Hero Section - Personnalisé selon l'authentification */}
         <div className="text-center mb-20">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Welcome to MindBloom
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-8">
-            A virtual support platform for patients suffering from depression or anxiety, with chatbots using cognitive
-            behavioral therapy techniques. Your journey to mental wellness starts here, with compassionate support
-            available 24/7.
-          </p>
-          {/* Animated Robot Button */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link href="/authentification/sign_up">
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
-              >
-                <Bot className="h-6 w-6 mr-3 animate-bounce group-hover:animate-pulse" />
-                <span className="text-lg font-semibold">Start Your Journey</span>
-              </Button>
-            </Link>
-            <Link href="/authentification/login">
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-2 border-green-500 text-green-600 hover:bg-green-50 px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-              >
-                <span className="text-lg font-semibold">I Already Have an Account</span>
-              </Button>
-            </Link>
-          </div>
+          {currentUser ? (
+            <>
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Welcome back, {currentUser.firstName || currentUser.username}!
+              </h1>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-8">
+                Ready to continue your mental wellness journey? Explore our services and tools designed to support your growth and healing.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Welcome to MindBloom
+              </h1>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-8">
+                A virtual support platform for patients suffering from depression or anxiety, with chatbots using cognitive
+                behavioral therapy techniques. Your journey to mental wellness starts here, with compassionate support
+                available 24/7.
+              </p>
+              {/* Animated Robot Button - Affiché seulement si non connecté */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <Link href="/authentification/sign_up">
+                  <Button
+                    size="lg"
+                    className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+                  >
+                    <Bot className="h-6 w-6 mr-3 animate-bounce group-hover:animate-pulse" />
+                    <span className="text-lg font-semibold">Start Your Journey</span>
+                  </Button>
+                </Link>
+                <Link href="/authentification/login">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-2 border-green-500 text-green-600 hover:bg-green-50 px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                  >
+                    <span className="text-lg font-semibold">I Already Have an Account</span>
+                  </Button>
+                </Link>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Platform Information */}
@@ -213,7 +281,9 @@ export default function HomePage() {
 
         {/* Services Section */}
         <section>
-          <h3 className="text-4xl font-bold mb-12 text-center text-gray-800">Explore Our Services</h3>
+          <h3 className="text-4xl font-bold mb-12 text-center text-gray-800">
+            {currentUser ? 'Continue Your Journey' : 'Explore Our Services'}
+          </h3>
           <div className="grid gap-8 md:grid-cols-3">
             {services.map((service, index) => (
               <Card
@@ -238,7 +308,7 @@ export default function HomePage() {
                       size="sm"
                       className="w-full group-hover:bg-gradient-to-r group-hover:from-green-500 group-hover:to-blue-500 group-hover:text-white group-hover:border-transparent transition-all duration-300"
                     >
-                      Explore
+                      {currentUser ? 'Continue' : 'Explore'}
                     </Button>
                   </Link>
                 </CardContent>

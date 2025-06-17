@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from "react"
+import { useRouter } from 'next/navigation'
 import { supabase } from "@/lib/supabaseClient"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,7 +15,8 @@ export default function SignUpPage() {
     password: ''
   })
   const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -22,25 +24,46 @@ export default function SignUpPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError("")
+    setIsLoading(true)
 
-    const { error } = await supabase
-      .from('user') 
-      .insert([
-        {
+    try {
+      const { error } = await supabase
+        .from('user') 
+        .insert([
+          {
+            username: formData.username,
+            firstname: formData.firstName,
+            lastname: formData.lastName,
+            password: formData.password // 🔐 À hasher côté serveur ou avec une edge function
+          }
+        ])
+
+      if (error) {
+        setError(error.message)
+        setIsLoading(false)
+      } else {
+        // Compte créé avec succès - connexion automatique
+        const userData = {
           username: formData.username,
-          firstname: formData.firstName,
-          lastname: formData.lastName,
-          password: formData.password // 🔐 À hasher côté serveur ou avec une edge function
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          isAuthenticated: true,
+          loginTime: new Date().toISOString()
         }
-      ])
 
-    if (error) {
-      setError(error.message)
-      setSuccess("")
-    } else {
-      setSuccess("Account created successfully!")
-      setError("")
-      setFormData({ firstName: '', lastName: '', username: '', password: '' })
+        // Stocker les informations utilisateur
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('currentUser', JSON.stringify(userData))
+        }
+
+        // Redirection vers la page principale
+        router.push('/')
+      }
+    } catch (err) {
+      console.error('Signup error:', err)
+      setError('Unexpected error occurred. Please try again.')
+      setIsLoading(false)
     }
   }
 
@@ -65,6 +88,7 @@ export default function SignUpPage() {
                   placeholder="Enter your first name"
                   value={formData.firstName}
                   onChange={handleChange}
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -77,6 +101,7 @@ export default function SignUpPage() {
                   placeholder="Enter your last name"
                   value={formData.lastName}
                   onChange={handleChange}
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -91,6 +116,7 @@ export default function SignUpPage() {
                 placeholder="Choose a username"
                 value={formData.username}
                 onChange={handleChange}
+                disabled={isLoading}
               />
             </div>
 
@@ -104,17 +130,33 @@ export default function SignUpPage() {
                 placeholder="Create a password"
                 value={formData.password}
                 onChange={handleChange}
+                disabled={isLoading}
               />
             </div>
           </div>
 
           {error && <p className="text-red-600 text-sm">{error}</p>}
-          {success && <p className="text-green-600 text-sm">{success}</p>}
 
           <div className="space-y-4">
-            <Button type="submit" className="w-full">Create Account</Button>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Creating Account...' : 'Create Account'}
+            </Button>
           </div>
         </form>
+
+        <div className="text-center">
+          <p className="text-sm text-gray-600">
+            Already have an account?{' '}
+            <button
+              type="button"
+              onClick={() => router.push('/authentification/login')}
+              className="text-blue-600 hover:text-blue-500 font-medium"
+              disabled={isLoading}
+            >
+              Sign in here
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   )
