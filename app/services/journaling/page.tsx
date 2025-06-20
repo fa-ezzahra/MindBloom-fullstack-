@@ -40,6 +40,15 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
+// Define UserData interface to match HomePage
+interface UserData {
+    username: string
+    firstName: string
+    lastName: string
+    isAuthenticated: boolean
+    loginTime: string
+}
+
 // Mock data for journal entries
 const mockEntries = [
     {
@@ -98,6 +107,7 @@ export default function JournalingPage() {
     const [searchTerm, setSearchTerm] = useState("")
     const [filterMood, setFilterMood] = useState("")
     const [isEditMode, setIsEditMode] = useState(false)
+    const [currentUser, setCurrentUser] = useState<UserData | null>(null)
     const textareaRef = useRef(null)
 
     const inspirationalQuotes = [
@@ -108,6 +118,22 @@ export default function JournalingPage() {
         "What you write today is how you see the world tomorrow.",
         "Your journal is the story of your life, waiting to be told.",
     ]
+
+    // Check authentication on load
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const storedUser = sessionStorage.getItem('currentUser')
+            if (storedUser) {
+                try {
+                    const userData = JSON.parse(storedUser)
+                    setCurrentUser(userData)
+                } catch (error) {
+                    console.error('Error parsing user data:', error)
+                    sessionStorage.removeItem('currentUser')
+                }
+            }
+        }
+    }, [])
 
     // Rotate quotes every 5 seconds
     useEffect(() => {
@@ -189,9 +215,14 @@ export default function JournalingPage() {
                             <Link href="/journal" className="text-blue-600 font-medium">
                                 Journal
                             </Link>
-                            <Button variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
-                                Log In
-                            </Button>
+                            {/* Display username from session */}
+                            {currentUser ? (
+                                <span className="text-blue-700 font-medium">
+                                    Hi, {currentUser.firstName || currentUser.username}! 👋
+                                </span>
+                            ) : (
+                                <span className="text-gray-500 font-medium">Guest</span>
+                            )}
                         </div>
 
                         {/* Mobile Menu Button */}
@@ -397,10 +428,10 @@ export default function JournalingPage() {
                                                                 <Badge
                                                                     variant="outline"
                                                                     className={`ml-2 flex-shrink-0 ${entry.mood === "happy" || entry.mood === "grateful"
-                                                                            ? "text-green-600 border-green-200"
-                                                                            : entry.mood === "anxious" || entry.mood === "sad"
-                                                                                ? "text-rose-600 border-rose-200"
-                                                                                : "text-blue-600 border-blue-200"
+                                                                        ? "text-green-600 border-green-200"
+                                                                        : entry.mood === "anxious" || entry.mood === "sad"
+                                                                            ? "text-rose-600 border-rose-200"
+                                                                            : "text-blue-600 border-blue-200"
                                                                         }`}
                                                                 >
                                                                     {entry.mood}
@@ -477,10 +508,10 @@ export default function JournalingPage() {
                                                     <Badge
                                                         variant="outline"
                                                         className={`${selectedEntry.mood === "happy" || selectedEntry.mood === "grateful"
-                                                                ? "text-green-600 border-green-200"
-                                                                : selectedEntry.mood === "anxious" || selectedEntry.mood === "sad"
-                                                                    ? "text-rose-600 border-rose-200"
-                                                                    : "text-blue-600 border-blue-200"
+                                                            ? "text-green-600 border-green-200"
+                                                            : selectedEntry.mood === "anxious" || selectedEntry.mood === "sad"
+                                                                ? "text-rose-600 border-rose-200"
+                                                                : "text-blue-600 border-blue-200"
                                                             }`}
                                                     >
                                                         Mood: {selectedEntry.mood}

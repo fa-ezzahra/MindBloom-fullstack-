@@ -146,15 +146,15 @@ export default function HomePage() {
               <Link href="/about" className="text-gray-700 hover:text-green-600 transition-colors font-medium">
                 About Us
               </Link>
-              
+
               {/* Affichage conditionnel selon l'authentification */}
               {currentUser ? (
                 <div className="flex items-center space-x-4">
                   <span className="text-green-700 font-medium">
                     Hi, {currentUser.firstName || currentUser.username}! 👋
                   </span>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="border-red-200 text-red-700 hover:bg-red-50"
                     onClick={handleLogout}
                   >

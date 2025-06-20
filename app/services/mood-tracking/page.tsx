@@ -32,6 +32,15 @@ import {
   Brain,
 } from "lucide-react"
 
+// Define UserData interface to match JournalingPage
+interface UserData {
+  username: string
+  firstName: string
+  lastName: string
+  isAuthenticated: boolean
+  loginTime: string
+}
+
 // Mock data for mood tracking
 const moodOptions = [
   { id: "ecstatic", name: "Ecstatic", icon: <Sun className="h-6 w-6" />, color: "bg-yellow-400", value: 5 },
@@ -59,6 +68,7 @@ export default function MoodTrackingPage() {
   const [selectedMood, setSelectedMood] = useState<string | null>(null)
   const [todayMood, setTodayMood] = useState<string | null>("content")
   const [weeklyData, setWeeklyData] = useState(mockWeeklyData)
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null)
 
   const inspirationalQuotes = [
     "Your feelings are valid, and tracking them is a step toward understanding yourself.",
@@ -68,6 +78,22 @@ export default function MoodTrackingPage() {
     "Understanding your emotional patterns is the first step to emotional wellness.",
     "Your mood today doesn't define you, but tracking it helps you grow.",
   ]
+
+  // Check authentication on load
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedUser = sessionStorage.getItem('currentUser')
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser)
+          setCurrentUser(userData)
+        } catch (error) {
+          console.error('Error parsing user data:', error)
+          sessionStorage.removeItem('currentUser')
+        }
+      }
+    }
+  }, [])
 
   // Rotate quotes every 5 seconds
   useEffect(() => {
@@ -81,6 +107,11 @@ export default function MoodTrackingPage() {
     setSelectedMood(moodId)
     setTodayMood(moodId)
     // In a real app, this would save to database
+  }
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('currentUser')
+    setCurrentUser(null)
   }
 
   const getWeeklyAverage = () => {
@@ -133,9 +164,24 @@ export default function MoodTrackingPage() {
               <Link href="/mood-tracking" className="text-pink-600 font-medium">
                 Mood Tracking
               </Link>
-              <Button variant="outline" className="border-pink-200 text-pink-700 hover:bg-pink-50">
-                Log In
-              </Button>
+              {currentUser ? (
+                <>
+                  <span className="text-pink-700 font-medium">
+                    Hi, {currentUser.firstName || currentUser.username}! 👋
+                  </span>
+                  <Button
+                    variant="outline"
+                    className="border-pink-200 text-pink-700 hover:bg-pink-50"
+                    onClick={handleLogout}
+                  >
+                    Log Out
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" className="border-pink-200 text-pink-700 hover:bg-pink-50">
+                  Log In
+                </Button>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -211,8 +257,8 @@ export default function MoodTrackingPage() {
                         key={mood.id}
                         onClick={() => handleMoodSelect(mood.id)}
                         className={`p-4 rounded-2xl border-2 transition-all duration-300 hover:scale-105 ${todayMood === mood.id
-                            ? "border-pink-500 bg-pink-50 shadow-lg"
-                            : "border-gray-200 hover:border-pink-300 bg-white"
+                          ? "border-pink-500 bg-pink-50 shadow-lg"
+                          : "border-gray-200 hover:border-pink-300 bg-white"
                           }`}
                       >
                         <div
@@ -336,10 +382,10 @@ export default function MoodTrackingPage() {
                     <div className="text-center">
                       <div
                         className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getMoodTrend() === "improving"
-                            ? "bg-green-100 text-green-800"
-                            : getMoodTrend() === "declining"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-blue-100 text-blue-800"
+                          ? "bg-green-100 text-green-800"
+                          : getMoodTrend() === "declining"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-blue-100 text-blue-800"
                           }`}
                       >
                         {getMoodTrend() === "improving" ? (
