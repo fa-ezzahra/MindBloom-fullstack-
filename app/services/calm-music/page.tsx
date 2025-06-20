@@ -1,14 +1,25 @@
 "use client"
+
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { MessageCircle, Music, Quote, Heart, Sparkles, Bot, Play, Pause, Volume2, VolumeX } from "lucide-react"
 
+// Define UserData interface to match JournalingPage
+interface UserData {
+  username: string
+  firstName: string
+  lastName: string
+  isAuthenticated: boolean
+  loginTime: string
+}
+
 export default function MusicPage() {
   const [currentQuote, setCurrentQuote] = useState(0)
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null)
   const [isMuted, setIsMuted] = useState(false)
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null)
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({})
 
   const inspirationalQuotes = [
@@ -27,7 +38,7 @@ export default function MusicPage() {
       icon: <Music className="h-8 w-8" />,
       color: "from-emerald-100 to-teal-100",
       iconColor: "text-emerald-600",
-      audioUrl: "/placeholder-audio.mp3", // In real app, this would be actual audio files
+      audioUrl: "/placeholder-audio.mp3",
       duration: "15 min",
       type: "Classical Piano",
     },
@@ -83,6 +94,22 @@ export default function MusicPage() {
     },
   ]
 
+  // Check authentication on load
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedUser = sessionStorage.getItem('currentUser')
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser)
+          setCurrentUser(userData)
+        } catch (error) {
+          console.error('Error parsing user data:', error)
+          sessionStorage.removeItem('currentUser')
+        }
+      }
+    }
+  }, [])
+
   // Rotate quotes every 5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
@@ -107,16 +134,12 @@ export default function MusicPage() {
     const audio = audioRefs.current[cardTitle]
 
     if (currentlyPlaying === cardTitle) {
-      // Pause current audio
       audio.pause()
       setCurrentlyPlaying(null)
     } else {
-      // Stop any currently playing audio
       if (currentlyPlaying) {
         audioRefs.current[currentlyPlaying].pause()
       }
-
-      // Start new audio
       audio.src = audioUrl
       audio.play().catch(console.error)
       setCurrentlyPlaying(cardTitle)
@@ -130,13 +153,17 @@ export default function MusicPage() {
     })
   }
 
+  const handleLogout = () => {
+    sessionStorage.removeItem('currentUser')
+    setCurrentUser(null)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
       {/* Navigation */}
       <nav className="bg-white/80 backdrop-blur-md border-b border-green-100 sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            {/* Logo and Name */}
             <div className="flex items-center space-x-3">
               <div className="relative">
                 <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center">
@@ -150,8 +177,6 @@ export default function MusicPage() {
                 MindBloom Calm Music
               </span>
             </div>
-
-            {/* Navigation Links */}
             <div className="hidden md:flex items-center space-x-8">
               <Link href="/" className="text-gray-700 hover:text-green-600 transition-colors font-medium">
                 Home
@@ -166,12 +191,25 @@ export default function MusicPage() {
               >
                 {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
               </Button>
-              <Button variant="outline" className="border-green-200 text-green-700 hover:bg-green-50">
-                Log In
-              </Button>
+              {currentUser ? (
+                <>
+                  <span className="text-green-700 font-medium">
+                    Hi, {currentUser.firstName || currentUser.username}! 👋
+                  </span>
+                  <Button
+                    variant="outline"
+                    className="border-green-200 text-green-700 hover:bg-green-50"
+                    onClick={handleLogout}
+                  >
+                    Log Out
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" className="border-green-200 text-green-700 hover:bg-green-50">
+                  Log In
+                </Button>
+              )}
             </div>
-
-            {/* Mobile Menu Button */}
             <Button variant="ghost" className="md:hidden">
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -181,7 +219,6 @@ export default function MusicPage() {
         </div>
       </nav>
 
-      {/* Inspirational Quote */}
       <div className="bg-gradient-to-r from-green-100 to-emerald-100 py-6">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-center space-x-4">
@@ -194,9 +231,7 @@ export default function MusicPage() {
         </div>
       </div>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-16">
-        {/* Hero Section */}
         <div className="text-center mb-20">
           <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
             Music Therapy
@@ -214,7 +249,6 @@ export default function MusicPage() {
           </div>
         </div>
 
-        {/* Music Cards Section */}
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-gray-800 mb-4">Choose Your Sound</h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -255,8 +289,8 @@ export default function MusicPage() {
                   variant="outline"
                   size="sm"
                   className={`w-full transition-all duration-300 ${currentlyPlaying === card.title
-                      ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white border-transparent"
-                      : "group-hover:bg-gradient-to-r group-hover:from-green-500 group-hover:to-emerald-500 group-hover:text-white group-hover:border-transparent"
+                    ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white border-transparent"
+                    : "group-hover:bg-gradient-to-r group-hover:from-green-500 group-hover:to-emerald-500 group-hover:text-white group-hover:border-transparent"
                     }`}
                 >
                   {currentlyPlaying === card.title ? "Now Playing" : "Play"}
@@ -266,7 +300,6 @@ export default function MusicPage() {
           ))}
         </div>
 
-        {/* Music Benefits Section */}
         <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl p-8 md:p-12 mb-20 border border-indigo-100">
           <div className="text-center mb-12">
             <Music className="h-16 w-16 text-indigo-600 mx-auto mb-6" />
@@ -317,7 +350,6 @@ export default function MusicPage() {
         </div>
       </main>
 
-      {/* Floating Chatbot Button */}
       <Link href="/chatbot">
         <Button
           size="lg"
@@ -328,7 +360,6 @@ export default function MusicPage() {
         </Button>
       </Link>
 
-      {/* Floating Animation */}
       <div className="fixed top-1/4 left-8 opacity-20 pointer-events-none">
         <div className="animate-bounce">
           <Music className="h-8 w-8 text-green-400" />

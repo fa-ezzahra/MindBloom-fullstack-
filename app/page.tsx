@@ -62,7 +62,7 @@ export default function HomePage() {
     },
     {
       title: "Mood Tracking",
-      description: "Monitor your daily emotions and identify patterns to better understand your mental health journey.",
+      description: "Monitor your daily emotions to better understand your mental health journey.",
       icon: <TrendingUp className="h-8 w-8" />,
       color: "from-rose-100 to-pink-100",
       iconColor: "text-rose-600",
@@ -193,7 +193,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-center space-x-4">
             <Quote className="h-6 w-6 text-green-600 flex-shrink-0" />
-            <p className="text-center text-gray-700 font-medium text-lg max-w-2xl transition-all duration-500 ease-in-out">
+            <p className="text-center text-gray-700 font-medium text-lg max-w-2xl transition-all duration-300 ease-in-out">
               {inspirationalQuotes[currentQuote]}
             </p>
             <Quote className="h-6 w-6 text-green-600 flex-shrink-0 rotate-180" />
@@ -204,7 +204,7 @@ export default function HomePage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-16">
         {/* Hero Section - Personnalisé selon l'authentification */}
-        <div className="text-center mb-20">
+        <div className="text-center mb-20 relative">
           {currentUser ? (
             <>
               <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -229,7 +229,7 @@ export default function HomePage() {
                 <Link href="/authentification/sign_up">
                   <Button
                     size="lg"
-                    className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+                    className="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white px-5 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
                   >
                     <Bot className="h-6 w-6 mr-3 animate-bounce group-hover:animate-pulse" />
                     <span className="text-lg font-semibold">Start Your Journey</span>
@@ -239,52 +239,75 @@ export default function HomePage() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-2 border-green-500 text-green-600 hover:bg-green-50 px-8 py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                    className="border-2 border-green-500 text-green-600 hover:bg-green-50 px-5 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
                   >
                     <span className="text-lg font-semibold">I Already Have an Account</span>
                   </Button>
                 </Link>
               </div>
+              {/* Floating CBT Chatbot Robot */}
+              <Link href="/services/cbt-chatbot" className="absolute bottom-0 right-0 md:right-10 mb-8 md:mb-12 flex flex-col items-center">
+                <div className="group flex items-center justify-center bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-full w-20 h-20 shadow-xl hover:shadow-2xl hover:scale-125 transition-all duration-300 animate-float animate-pulse">
+                  <Bot className="h-12 w-12 group-hover:animate-bounce" />
+                </div>
+                <span className="mt-2 text-sm font-bold text-center bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                  Talk to a CBT-trained Chatbot
+                </span>
+              </Link>
             </>
           )}
         </div>
 
         {/* Platform Information */}
-        <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-6 md:p-8 mb-20 shadow-lg border border-white/20">
-          <div className="grid md:grid-cols-3 gap-8 items-center">
+        <div className="bg-gradient-to-r from-green-100 via-blue-100 to-purple-100 rounded-3xl p-6 md:p-10 mb-20 shadow-2xl border border-white/30 backdrop-blur-md">
+          <div className="grid md:grid-cols-3 gap-10 items-center">
             <div className="md:col-span-2">
-              <h2 className="text-3xl font-bold text-gray-800 mb-6">Your Mental Health Matters</h2>
-              <p className="text-gray-600 text-lg leading-relaxed mb-6">
+              <h2 className="text-4xl font-extrabold text-gray-900 mb-6 bg-clip-text textnent bg-gradient-to-r from-green-600 to-blue-600">
+                Your Mental Health Matters
+              </h2>
+              <p className="text-gray-800 text-lg font-medium leading-relaxed mb-6">
                 MindBloom combines evidence-based cognitive behavioral therapy techniques with modern technology to
                 provide accessible mental health support. Our platform offers a safe, judgment-free space where you can
                 explore your thoughts, track your progress, and engage with exercises designed to help you heal and
                 thrive.
               </p>
-              <ul className="list-disc list-inside text-gray-600 space-y-2">
-                <li>Personalized mood tracking and journaling tools</li>
-                <li>Access to calming music and relaxation techniques</li>
-                <li>Interactive CBT-based exercises and insights</li>
-                <li>24/7 chatbot support tailored to your needs</li>
-                <li>Secure and confidential environment</li>
+              <ul className="space-y-3 text-gray-700 text-base">
+                <li className="flex items-center">
+                  <Sparkles className="h-5 w-5 text-green-500 mr-2" />
+                  Personalized mood tracking and journaling tools
+                </li>
+                <li className="flex items-center">
+                  <Sparkles className="h-5 w-5 text-blue-500 mr-2" />
+                  Access to calming music and relaxation techniques
+                </li>
+                <li className="flex items-center">
+                  <Sparkles className="h-5 w-5 text-purple-500 mr-2" />
+                  Interactive CBT-based exercises and insights
+                </li>
+                <li className="flex items-center">
+                  <Sparkles className="h-5 w-5 text-green-500 mr-2" />
+                  24/7 chatbot support tailored to your needs
+                </li>
+                <li className="flex items-center">
+                  <Sparkles className="h-5 w-5 text-blue-500 mr-2" />
+                  Secure and confidential environment
+                </li>
               </ul>
             </div>
             <div className="flex justify-center md:justify-end">
-              <img
-                src="/assets/mental-health-illustration.png"
-                alt="Mental Health Illustration"
-                className="w-64 h-auto rounded-xl shadow-md"
-                loading="lazy"
-              />
+              <div className="w-80 h-80 bg-gradient-to-br from-green-400 to-blue-500 rounded-lg flex items-center justify-center transform hover:scale-105 transition-transform duration-300">
+                <Brain className="h-48 w-48 text-white" />
+              </div>
             </div>
           </div>
         </div>
 
         {/* Services Section */}
         <section>
-          <h3 className="text-4xl font-bold mb-12 text-center text-gray-800">
+          <h2 className="text-4xl font-bold mb-12 text-center text-gray-800">
             {currentUser ? 'Continue Your Journey' : 'Explore Our Services'}
-          </h3>
-          <div className="grid gap-8 md:grid-cols-3">
+          </h2>
+          <div className="grid gap-8 md:grid-cols-5">
             {services.map((service, index) => (
               <Card
                 key={index}
@@ -321,7 +344,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="bg-green-50 border-t border-green-100 py-10">
         <div className="container mx-auto px-4 text-center text-green-600">
-          &copy; {new Date().getFullYear()} MindBloom. All rights reserved.
+          © {new Date().getFullYear()} MindBloom. All rights reserved.
         </div>
       </footer>
     </div>

@@ -31,6 +31,15 @@ import {
     BookOpen,
 } from "lucide-react"
 
+// Define UserData interface to match JournalingPage
+interface UserData {
+    username: string
+    firstName: string
+    lastName: string
+    isAuthenticated: boolean
+    loginTime: string
+}
+
 // Types for exercises
 interface ThoughtRecord {
     id: string
@@ -61,6 +70,7 @@ interface QuizQuestion {
 
 export default function ExercisesPage() {
     const [currentQuote, setCurrentQuote] = useState(0)
+    const [currentUser, setCurrentUser] = useState<UserData | null>(null)
 
     // Thought Record State
     const [thoughtRecord, setThoughtRecord] = useState<Partial<ThoughtRecord>>({})
@@ -177,6 +187,22 @@ export default function ExercisesPage() {
     ]
 
     const breathingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+    // Check authentication on load
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const storedUser = sessionStorage.getItem('currentUser')
+            if (storedUser) {
+                try {
+                    const userData = JSON.parse(storedUser)
+                    setCurrentUser(userData)
+                } catch (error) {
+                    console.error('Error parsing user data:', error)
+                    sessionStorage.removeItem('currentUser')
+                }
+            }
+        }
+    }, [])
 
     // Load data from localStorage on mount
     useEffect(() => {
@@ -347,6 +373,11 @@ export default function ExercisesPage() {
         }
     }
 
+    const handleLogout = () => {
+        sessionStorage.removeItem('currentUser')
+        setCurrentUser(null)
+    }
+
     const thoughtRecordSteps = [
         { label: "Trigger", field: "trigger", placeholder: "What happened? Describe the situation..." },
         { label: "Emotion", field: "emotion", placeholder: "What did you feel? (e.g., anxious, sad, angry...)" },
@@ -389,9 +420,24 @@ export default function ExercisesPage() {
                             <Link href="/exercises" className="text-violet-600 font-medium">
                                 Exercises
                             </Link>
-                            <Button variant="outline" className="border-violet-200 text-violet-700 hover:bg-violet-50">
-                                Log In
-                            </Button>
+                            {currentUser ? (
+                                <>
+                                    <span className="text-violet-700 font-medium">
+                                        Hi, {currentUser.firstName || currentUser.username}! 👋
+                                    </span>
+                                    <Button
+                                        variant="outline"
+                                        className="border-violet-200 text-violet-700 hover:bg-violet-50"
+                                        onClick={handleLogout}
+                                    >
+                                        Log Out
+                                    </Button>
+                                </>
+                            ) : (
+                                <Button variant="outline" className="border-violet-200 text-violet-700 hover:bg-violet-50">
+                                    Log In
+                                </Button>
+                            )}
                         </div>
 
                         {/* Mobile Menu Button */}
@@ -511,7 +557,7 @@ export default function ExercisesPage() {
                                     )}
 
                                     {hasRatedBefore && hasRatedAfter && (
-                                        <div className="p-4 bg-violet-50 rounded-lg">
+                                        <div className="p-4 bg-violet-50 rounded">
                                             <h4 className="font-semibold text-violet-800 mb-2">Your Progress</h4>
                                             <div className="text-2xl font-bold text-violet-600 mb-2">
                                                 {anxietyBefore[0] - anxietyAfter[0] > 0 ? "-" : "+"}
@@ -598,7 +644,7 @@ export default function ExercisesPage() {
                                         <h4 className="font-semibold text-gray-800 mb-4">Previous Records</h4>
                                         <div className="space-y-2 max-h-40 overflow-y-auto">
                                             {thoughtRecords.slice(-3).map((record) => (
-                                                <div key={record.id} className="p-3 bg-violet-50 rounded-lg">
+                                                <div key={record.id} className="p-3 bg-violet-50 rounded">
                                                     <div className="text-sm font-medium text-violet-800">{record.trigger}</div>
                                                     <div className="text-xs text-violet-600">{new Date(record.date).toLocaleDateString()}</div>
                                                 </div>
@@ -625,12 +671,12 @@ export default function ExercisesPage() {
                                     <div className="relative">
                                         <div
                                             className={`w-32 h-32 mx-auto rounded-full border-4 flex items-center justify-center transition-all duration-1000 ${breathingPhase === "inhale"
-                                                    ? "border-green-400 bg-green-50 scale-110"
-                                                    : breathingPhase === "hold"
-                                                        ? "border-yellow-400 bg-yellow-50 scale-110"
-                                                        : breathingPhase === "exhale"
-                                                            ? "border-blue-400 bg-blue-50 scale-90"
-                                                            : "border-violet-400 bg-violet-50"
+                                                ? "border-green-400 bg-green-50 scale-110"
+                                                : breathingPhase === "hold"
+                                                    ? "border-yellow-400 bg-yellow-50 scale-110"
+                                                    : breathingPhase === "exhale"
+                                                        ? "border-blue-400 bg-blue-50 scale-90"
+                                                        : "border-violet-400 bg-violet-50"
                                                 }`}
                                         >
                                             <div className="text-center">
@@ -716,7 +762,7 @@ export default function ExercisesPage() {
                                     </Button>
 
                                     {showDistortionHelp && (
-                                        <div className="p-4 bg-violet-50 rounded-lg">
+                                        <div className="p-4 bg-violet-50 rounded">
                                             <h4 className="font-semibold text-violet-800 mb-2">Possible Distortion: {selectedDistortion}</h4>
                                             {selectedDistortion !== "No specific distortion detected" && (
                                                 <div className="space-y-2">
@@ -733,7 +779,7 @@ export default function ExercisesPage() {
 
                                     <div className="grid md:grid-cols-2 gap-4">
                                         {cognitiveDistortions.map((distortion) => (
-                                            <div key={distortion.name} className="p-4 border border-violet-200 rounded-lg">
+                                            <div key={distortion.name} className="p-4 border border-violet-200 rounded">
                                                 <h5 className="font-medium text-violet-800 mb-2">{distortion.name}</h5>
                                                 <p className="text-sm text-gray-600">{distortion.description}</p>
                                             </div>
@@ -783,7 +829,7 @@ export default function ExercisesPage() {
                                             activities.map((activity) => (
                                                 <div
                                                     key={activity.id}
-                                                    className={`flex items-center space-x-3 p-3 rounded-lg border ${activity.completed ? "bg-green-50 border-green-200" : "bg-white border-violet-200"
+                                                    className={`flex items-center space-x-3 p-3 rounded border ${activity.completed ? "bg-green-50 border-green-200" : "bg-white border-violet-200"
                                                         }`}
                                                 >
                                                     <Checkbox checked={activity.completed} onCheckedChange={() => toggleActivity(activity.id)} />
@@ -806,7 +852,7 @@ export default function ExercisesPage() {
                                     </div>
 
                                     {activities.length > 0 && (
-                                        <div className="p-4 bg-violet-50 rounded-lg">
+                                        <div className="p-4 bg-violet-50 rounded">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-violet-800 font-medium">
                                                     Progress: {activities.filter((a) => a.completed).length} / {activities.length}
@@ -848,7 +894,7 @@ export default function ExercisesPage() {
                                             </Badge>
                                         </div>
 
-                                        <div className="p-4 bg-violet-50 rounded-lg">
+                                        <div className="p-4 bg-violet-50 rounded">
                                             <h4 className="font-medium text-violet-800 mb-2">Negative Thought:</h4>
                                             <p className="text-gray-700 italic">"{quizQuestions[currentQuestion].thought}"</p>
                                         </div>
@@ -861,13 +907,13 @@ export default function ExercisesPage() {
                                                         key={index}
                                                         onClick={() => handleAnswerSelect(index)}
                                                         disabled={showExplanation}
-                                                        className={`w-full p-3 text-left rounded-lg border transition-colors ${showExplanation
-                                                                ? index === quizQuestions[currentQuestion].correct
-                                                                    ? "bg-green-50 border-green-200 text-green-800"
-                                                                    : index === selectedAnswer
-                                                                        ? "bg-red-50 border-red-200 text-red-800"
-                                                                        : "bg-gray-50 border-gray-200 text-gray-600"
-                                                                : "bg-white border-violet-200 hover:bg-violet-50 text-gray-800"
+                                                        className={`w-full p-3 text-left rounded border transition-colors ${showExplanation
+                                                            ? index === quizQuestions[currentQuestion].correct
+                                                                ? "bg-green-50 border-green-200 text-green-800"
+                                                                : index === selectedAnswer
+                                                                    ? "bg-red-50 border-red-200 text-red-800"
+                                                                    : "bg-gray-50 border-gray-200 text-gray-600"
+                                                            : "bg-white border-violet-200 hover:bg-violet-50 text-gray-800"
                                                             }`}
                                                     >
                                                         {option}
@@ -877,7 +923,7 @@ export default function ExercisesPage() {
                                         </div>
 
                                         {showExplanation && (
-                                            <div className="p-4 bg-blue-50 rounded-lg">
+                                            <div className="p-4 bg-blue-50 rounded">
                                                 <h5 className="font-medium text-blue-800 mb-2">Explanation:</h5>
                                                 <p className="text-blue-700 text-sm">{quizQuestions[currentQuestion].explanation}</p>
                                                 <Button

@@ -30,8 +30,18 @@ import {
     Star,
 } from "lucide-react"
 
+// Define UserData interface to match JournalingPage
+interface UserData {
+    username: string
+    firstName: string
+    lastName: string
+    isAuthenticated: boolean
+    loginTime: string
+}
+
 export default function InsightsPage() {
     const [currentQuote, setCurrentQuote] = useState(0)
+    const [currentUser, setCurrentUser] = useState<UserData | null>(null)
 
     const inspirationalQuotes = [
         "CBT empowers both therapist and client to work collaboratively toward meaningful change.",
@@ -114,6 +124,22 @@ export default function InsightsPage() {
         },
     ]
 
+    // Check authentication on load
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const storedUser = sessionStorage.getItem('currentUser')
+            if (storedUser) {
+                try {
+                    const userData = JSON.parse(storedUser)
+                    setCurrentUser(userData)
+                } catch (error) {
+                    console.error('Error parsing user data:', error)
+                    sessionStorage.removeItem('currentUser')
+                }
+            }
+        }
+    }, [])
+
     // Rotate quotes every 5 seconds
     useEffect(() => {
         const interval = setInterval(() => {
@@ -121,6 +147,11 @@ export default function InsightsPage() {
         }, 5000)
         return () => clearInterval(interval)
     }, [])
+
+    const handleLogout = () => {
+        sessionStorage.removeItem('currentUser')
+        setCurrentUser(null)
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50">
@@ -149,9 +180,24 @@ export default function InsightsPage() {
                             <Link href="/insights" className="text-yellow-600 font-medium">
                                 Professional Insights
                             </Link>
-                            <Button variant="outline" className="border-yellow-200 text-yellow-700 hover:bg-yellow-50">
-                                Log In
-                            </Button>
+                            {currentUser ? (
+                                <>
+                                    <span className="text-yellow-700 font-medium">
+                                        Hi, {currentUser.firstName || currentUser.username}! 👋
+                                    </span>
+                                    <Button
+                                        variant="outline"
+                                        className="border-yellow-200 text-yellow-700 hover:bg-yellow-50"
+                                        onClick={handleLogout}
+                                    >
+                                        Log Out
+                                    </Button>
+                                </>
+                            ) : (
+                                <Button variant="outline" className="border-yellow-200 text-yellow-700 hover:bg-yellow-50">
+                                    Log In
+                                </Button>
+                            )}
                         </div>
 
                         {/* Mobile Menu Button */}
@@ -354,10 +400,10 @@ export default function InsightsPage() {
                                             <Badge
                                                 variant="outline"
                                                 className={`${technique.difficulty === "Beginner"
-                                                        ? "border-green-200 text-green-700"
-                                                        : technique.difficulty === "Intermediate"
-                                                            ? "border-yellow-200 text-yellow-700"
-                                                            : "border-red-200 text-red-700"
+                                                    ? "border-green-200 text-green-700"
+                                                    : technique.difficulty === "Intermediate"
+                                                        ? "border-yellow-200 text-yellow-700"
+                                                        : "border-red-200 text-red-700"
                                                     }`}
                                             >
                                                 {technique.difficulty}
@@ -468,10 +514,10 @@ export default function InsightsPage() {
                                             <Badge
                                                 variant="outline"
                                                 className={`${research.impact === "Very High"
-                                                        ? "border-green-200 text-green-700 bg-green-50"
-                                                        : research.impact === "High"
-                                                            ? "border-blue-200 text-blue-700 bg-blue-50"
-                                                            : "border-yellow-200 text-yellow-700 bg-yellow-50"
+                                                    ? "border-green-200 text-green-700 bg-green-50"
+                                                    : research.impact === "High"
+                                                        ? "border-blue-200 text-blue-700 bg-blue-50"
+                                                        : "border-yellow-200 text-yellow-700 bg-yellow-50"
                                                     }`}
                                             >
                                                 {research.impact} Impact
@@ -545,7 +591,7 @@ export default function InsightsPage() {
                                         <div className="p-4 border border-amber-200 rounded-lg">
                                             <h4 className="font-semibold text-gray-800 mb-2">BABCP Accreditation</h4>
                                             <p className="text-gray-600 text-sm mb-2">
-                                                British Association for Behavioural and Cognitive Psychotherapies certification pathway.
+                                                British884 Association for Behavioural and Cognitive Psychotherapies certification pathway.
                                             </p>
                                             <Button variant="outline" size="sm">
                                                 <Download className="h-3 w-3 mr-1" />
