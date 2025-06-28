@@ -26,6 +26,7 @@ import {
     SunMoon,
     Brain,
     Lightbulb,
+    Loader2,
 } from "lucide-react"
 import {
     Dialog,
@@ -39,8 +40,10 @@ import {
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { useToast } from "@/components/ui/use-toast"
+import { journalService, JournalEntry } from "@/lib/supabase"
 
-// Define UserData interface to match HomePage
+// Define UserData interface
 interface UserData {
     username: string
     firstName: string
@@ -49,66 +52,22 @@ interface UserData {
     loginTime: string
 }
 
-// Mock data for journal entries
-const mockEntries = [
-    {
-        id: "1",
-        date: new Date(2023, 5, 15),
-        title: "Finding Peace in Chaos",
-        content:
-            "Today was challenging. Work pressure was high, but I managed to take short breaks to breathe and center myself. I'm proud of setting boundaries when my colleague asked for help with a project that would have overwhelmed me.",
-        mood: "calm",
-        tags: ["work", "boundaries", "self-care"],
-    },
-    {
-        id: "2",
-        date: new Date(2023, 5, 12),
-        title: "Small Victories",
-        content:
-            "I went for a morning walk today! It's been weeks since I've done that. The fresh air and gentle exercise helped clear my mind. I noticed the flowers blooming and birds singing - small joys I've been missing lately.",
-        mood: "happy",
-        tags: ["exercise", "nature", "mindfulness"],
-    },
-    {
-        id: "3",
-        date: new Date(2023, 5, 10),
-        title: "Difficult Conversations",
-        content:
-            "Had to discuss some hard feelings with my partner today. I used the communication techniques from therapy - expressing feelings without blame, using 'I' statements. It went better than expected, and we both felt heard.",
-        mood: "reflective",
-        tags: ["relationships", "communication", "growth"],
-    },
-    {
-        id: "4",
-        date: new Date(2023, 5, 7),
-        title: "Anxiety Spiral",
-        content:
-            "Woke up with that familiar tightness in my chest. Anxiety about the upcoming presentation was overwhelming. I tried the 5-4-3-2-1 grounding technique and it helped somewhat. Need to remember that perfection isn't required.",
-        mood: "anxious",
-        tags: ["anxiety", "work", "coping-strategies"],
-    },
-    {
-        id: "5",
-        date: new Date(2023, 5, 5),
-        title: "Gratitude Practice",
-        content:
-            "Started my day listing three things I'm grateful for: 1) My supportive friend who called yesterday 2) Access to mental health resources 3) The comfortable home that keeps me safe. This simple practice shifted my perspective.",
-        mood: "grateful",
-        tags: ["gratitude", "perspective", "morning-routine"],
-    },
-]
-
 export default function JournalingPage() {
+    const { toast } = useToast()
     const [currentQuote, setCurrentQuote] = useState(0)
     const [journalContent, setJournalContent] = useState("")
     const [journalTitle, setJournalTitle] = useState("")
-    const [entries, setEntries] = useState(mockEntries)
-    const [selectedEntry, setSelectedEntry] = useState(null)
+    const [journalMood, setJournalMood] = useState("reflective")
+    const [journalTags, setJournalTags] = useState("")
+    const [entries, setEntries] = useState<JournalEntry[]>([])
+    const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null)
     const [searchTerm, setSearchTerm] = useState("")
     const [filterMood, setFilterMood] = useState("")
-    const [isEditMode, setIsEditMode] = useState(false)
     const [currentUser, setCurrentUser] = useState<UserData | null>(null)
-    const textareaRef = useRef(null)
+    const [isLoading, setIsLoading] = useState(false)
+    const [isSaving, setIsSaving] = useState(false)
+    const [isLoadingEntries, setIsLoadingEntries] = useState(true)
+    const textareaRef = useRef<HTMLTextAreaElement>(null)
 
     const inspirationalQuotes = [
         "Writing is medicine. It helps to heal the hurt by articulating it.",
@@ -119,7 +78,9 @@ export default function JournalingPage() {
         "Your journal is the story of your life, waiting to be told.",
     ]
 
-    // Check authentication on load
+    const moodOptions = ["happy", "calm", "anxious", "sad", "energetic", "reflective", "grateful"]
+
+    // Check authentication and load entries
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const storedUser = sessionStorage.getItem('currentUser')
@@ -127,13 +88,44 @@ export default function JournalingPage() {
                 try {
                     const userData = JSON.parse(storedUser)
                     setCurrentUser(userData)
+                    loadEntries(userData.username)
                 } catch (error) {
                     console.error('Error parsing user data:', error)
                     sessionStorage.removeItem('currentUser')
+                    toast({
+                        title: "Authentication Error",
+                        description: "Please log in again.",
+                        variant: "destructive",
+                    })
                 }
+            } else {
+                setIsLoadingEntries(false)
+                toast({
+                    title: "Not Authenticated",
+                    description: "Please log in to access your journal.",
+                    variant: "destructive",
+                })
             }
         }
     }, [])
+
+    // Load journal entries for the current user
+    const loadEntries = async (username: string) => {
+        setIsLoadingEntries(true)
+        try {
+            const userEntries = await journalService.getEntries(username)
+            setEntries(userEntries)
+        } catch (error) {
+            console.error('Error loading entries:', error)
+            toast({
+                title: "Error Loading Entries",
+                description: "Failed to load your journal entries.",
+                variant: "destructive",
+            })
+        } finally {
+            setIsLoadingEntries(false)
+        }
+    }
 
     // Rotate quotes every 5 seconds
     useEffect(() => {
@@ -145,48 +137,174 @@ export default function JournalingPage() {
 
     // Focus textarea when in edit mode
     useEffect(() => {
-        if (isEditMode && textareaRef.current) {
+        if (textareaRef.current) {
             textareaRef.current.focus()
         }
-    }, [isEditMode])
+    }, [])
 
-    const handleSaveEntry = () => {
-        if (!journalContent.trim()) return
-
-        const newEntry = {
-            id: Date.now().toString(),
-            date: new Date(),
-            title: journalTitle || `Journal Entry - ${format(new Date(), "MMMM d, yyyy")}`,
-            content: journalContent,
-            mood: "reflective", // Default mood
-            tags: ["daily-thoughts"],
+    const handleSaveEntry = async () => {
+        if (!journalContent.trim() || !currentUser) {
+            toast({
+                title: "Invalid Entry",
+                description: "Please write something before saving.",
+                variant: "destructive",
+            })
+            return
         }
 
-        setEntries([newEntry, ...entries])
-        setJournalContent("")
-        setJournalTitle("")
-    }
+        setIsSaving(true)
+        try {
+            const tagsArray = journalTags
+                .split(',')
+                .map(tag => tag.trim())
+                .filter(tag => tag.length > 0)
 
-    const handleDeleteEntry = (id) => {
-        setEntries(entries.filter((entry) => entry.id !== id))
-        if (selectedEntry && selectedEntry.id === id) {
-            setSelectedEntry(null)
+            const newEntry = await journalService.createEntry({
+                username: currentUser.username,
+                title: journalTitle || `Journal Entry - ${format(new Date(), "MMMM d, yyyy")}`,
+                content: journalContent,
+                mood: journalMood,
+                tags: tagsArray.length > 0 ? tagsArray : ["daily-thoughts"],
+            })
+
+            if (newEntry) {
+                setEntries([newEntry, ...entries])
+                setJournalContent("")
+                setJournalTitle("")
+                setJournalMood("reflective")
+                setJournalTags("")
+                toast({
+                    title: "Entry Saved",
+                    description: "Your journal entry has been saved successfully.",
+                })
+            } else {
+                throw new Error("Failed to create entry")
+            }
+        } catch (error) {
+            console.error('Error saving entry:', error)
+            toast({
+                title: "Save Failed",
+                description: "Failed to save your journal entry. Please try again.",
+                variant: "destructive",
+            })
+        } finally {
+            setIsSaving(false)
         }
     }
+
+    const handleDeleteEntry = async (id: string) => {
+        if (!currentUser) return
+
+        setIsLoading(true)
+        try {
+            const success = await journalService.deleteEntry(id, currentUser.username)
+            if (success) {
+                setEntries(entries.filter((entry) => entry.id !== id))
+                if (selectedEntry && selectedEntry.id === id) {
+                    setSelectedEntry(null)
+                }
+                toast({
+                    title: "Entry Deleted",
+                    description: "Your journal entry has been deleted.",
+                })
+            } else {
+                throw new Error("Failed to delete entry")
+            }
+        } catch (error) {
+            console.error('Error deleting entry:', error)
+            toast({
+                title: "Delete Failed",
+                description: "Failed to delete your journal entry. Please try again.",
+                variant: "destructive",
+            })
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const handleSearch = async () => {
+        if (!currentUser || !searchTerm.trim()) {
+            // If no search term, reload all entries
+            await loadEntries(currentUser?.username || '')
+            return
+        }
+
+        setIsLoadingEntries(true)
+        try {
+            const searchResults = await journalService.searchEntries(currentUser.username, searchTerm)
+            setEntries(searchResults)
+        } catch (error) {
+            console.error('Error searching entries:', error)
+            toast({
+                title: "Search Failed",
+                description: "Failed to search your entries. Please try again.",
+                variant: "destructive",
+            })
+        } finally {
+            setIsLoadingEntries(false)
+        }
+    }
+
+    const handleMoodFilter = async (mood: string) => {
+        if (!currentUser) return
+
+        setFilterMood(mood)
+        setIsLoadingEntries(true)
+
+        try {
+            if (mood) {
+                const filteredEntries = await journalService.getEntriesByMood(currentUser.username, mood)
+                setEntries(filteredEntries)
+            } else {
+                await loadEntries(currentUser.username)
+            }
+        } catch (error) {
+            console.error('Error filtering entries:', error)
+            toast({
+                title: "Filter Failed",
+                description: "Failed to filter your entries. Please try again.",
+                variant: "destructive",
+            })
+        } finally {
+            setIsLoadingEntries(false)
+        }
+    }
+
+    // Clear search and reload all entries
+    useEffect(() => {
+        if (!searchTerm && currentUser) {
+            loadEntries(currentUser.username)
+        }
+    }, [searchTerm])
 
     const filteredEntries = entries.filter((entry) => {
-        const matchesSearch = searchTerm
-            ? entry.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            entry.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            entry.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-            : true
+        if (!searchTerm) return true
 
-        const matchesMood = filterMood ? entry.mood === filterMood : true
-
-        return matchesSearch && matchesMood
+        const searchLower = searchTerm.toLowerCase()
+        return (
+            entry.title.toLowerCase().includes(searchLower) ||
+            entry.content.toLowerCase().includes(searchLower) ||
+            entry.tags.some((tag) => tag.toLowerCase().includes(searchLower))
+        )
     })
 
-    const moodOptions = ["happy", "calm", "anxious", "sad", "energetic", "reflective", "grateful"]
+    if (!currentUser) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+                <Card className="w-full max-w-md">
+                    <CardHeader className="text-center">
+                        <CardTitle>Authentication Required</CardTitle>
+                        <CardDescription>Please log in to access your journal</CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-center">
+                        <Link href="/">
+                            <Button>Go to Login</Button>
+                        </Link>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -215,14 +333,9 @@ export default function JournalingPage() {
                             <Link href="/journal" className="text-blue-600 font-medium">
                                 Journal
                             </Link>
-                            {/* Display username from session */}
-                            {currentUser ? (
-                                <span className="text-blue-700 font-medium">
-                                    Hi, {currentUser.firstName || currentUser.username}! 👋
-                                </span>
-                            ) : (
-                                <span className="text-gray-500 font-medium">Guest</span>
-                            )}
+                            <span className="text-blue-700 font-medium">
+                                Hi, {currentUser.username}! 👋
+                            </span>
                         </div>
 
                         {/* Mobile Menu Button */}
@@ -292,6 +405,26 @@ export default function JournalingPage() {
                                         value={journalTitle}
                                         onChange={(e) => setJournalTitle(e.target.value)}
                                     />
+                                    <div className="flex space-x-2 mt-2">
+                                        <select
+                                            className="flex-1 p-2 border rounded-md bg-white/70"
+                                            value={journalMood}
+                                            onChange={(e) => setJournalMood(e.target.value)}
+                                        >
+                                            {moodOptions.map((mood) => (
+                                                <option key={mood} value={mood}>
+                                                    {mood.charAt(0).toUpperCase() + mood.slice(1)}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <Input
+                                            type="text"
+                                            placeholder="Tags (comma separated)"
+                                            className="flex-1 bg-white/70"
+                                            value={journalTags}
+                                            onChange={(e) => setJournalTags(e.target.value)}
+                                        />
+                                    </div>
                                 </CardHeader>
                                 <CardContent className="p-0">
                                     <Textarea
@@ -305,15 +438,24 @@ export default function JournalingPage() {
                                 <CardFooter className="flex justify-between bg-gradient-to-r from-blue-50 to-indigo-50 py-4">
                                     <div className="flex items-center space-x-2 text-sm text-gray-500">
                                         <Clock className="h-4 w-4" />
-                                        <span>Auto-saved</span>
+                                        <span>Draft saved locally</span>
                                     </div>
                                     <Button
                                         onClick={handleSaveEntry}
-                                        disabled={!journalContent.trim()}
+                                        disabled={!journalContent.trim() || isSaving}
                                         className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600"
                                     >
-                                        <Save className="h-4 w-4 mr-2" />
-                                        Save Entry
+                                        {isSaving ? (
+                                            <>
+                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                Saving...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save className="h-4 w-4 mr-2" />
+                                                Save Entry
+                                            </>
+                                        )}
                                     </Button>
                                 </CardFooter>
                             </Card>
@@ -392,6 +534,7 @@ export default function JournalingPage() {
                                                     className="pl-10 bg-white/70"
                                                     value={searchTerm}
                                                     onChange={(e) => setSearchTerm(e.target.value)}
+                                                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                                                 />
                                             </div>
                                         </div>
@@ -401,7 +544,7 @@ export default function JournalingPage() {
                                             <select
                                                 className="text-sm border-0 bg-white/70 rounded-md"
                                                 value={filterMood}
-                                                onChange={(e) => setFilterMood(e.target.value)}
+                                                onChange={(e) => handleMoodFilter(e.target.value)}
                                             >
                                                 <option value="">All moods</option>
                                                 {moodOptions.map((mood) => (
@@ -414,7 +557,12 @@ export default function JournalingPage() {
                                     </CardHeader>
                                     <CardContent className="p-0 max-h-[600px] overflow-hidden">
                                         <ScrollArea className="h-[600px]">
-                                            {filteredEntries.length > 0 ? (
+                                            {isLoadingEntries ? (
+                                                <div className="flex items-center justify-center p-8">
+                                                    <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                                                    <span className="ml-2 text-gray-500">Loading entries...</span>
+                                                </div>
+                                            ) : filteredEntries.length > 0 ? (
                                                 <div className="divide-y divide-gray-100">
                                                     {filteredEntries.map((entry) => (
                                                         <div
@@ -438,7 +586,7 @@ export default function JournalingPage() {
                                                                 </Badge>
                                                             </div>
                                                             <p className="text-sm text-gray-500 mb-2">
-                                                                {format(new Date(entry.date), "MMM d, yyyy")}
+                                                                {format(new Date(entry.created_at), "MMM d, yyyy")}
                                                             </p>
                                                             <p className="text-sm text-gray-600 line-clamp-2">{entry.content}</p>
                                                             <div className="mt-2 flex flex-wrap gap-1">
@@ -458,7 +606,11 @@ export default function JournalingPage() {
                                                 <div className="p-8 text-center text-gray-500">
                                                     <BookOpen className="h-12 w-12 mx-auto text-gray-300 mb-2" />
                                                     <p>No entries found</p>
-                                                    <p className="text-sm mt-1">Try adjusting your search or filters</p>
+                                                    <p className="text-sm mt-1">
+                                                        {searchTerm || filterMood
+                                                            ? "Try adjusting your search or filters"
+                                                            : "Start writing your first journal entry!"}
+                                                    </p>
                                                 </div>
                                             )}
                                         </ScrollArea>
@@ -476,15 +628,29 @@ export default function JournalingPage() {
                                                     <div>
                                                         <div className="flex items-center space-x-2 text-sm text-gray-500 mb-1">
                                                             <Calendar className="h-4 w-4" />
-                                                            <span>{format(new Date(selectedEntry.date), "EEEE, MMMM d, yyyy")}</span>
+                                                            <span>{format(new Date(selectedEntry.created_at), "EEEE, MMMM d, yyyy")}</span>
+                                                            {selectedEntry.updated_at !== selectedEntry.created_at && (
+                                                                <span className="text-xs text-gray-400">
+                                                                    (edited {format(new Date(selectedEntry.updated_at), "MMM d")})
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <CardTitle className="text-xl text-gray-800">{selectedEntry.title}</CardTitle>
                                                     </div>
                                                     <div className="flex space-x-2">
                                                         <Dialog>
                                                             <DialogTrigger asChild>
-                                                                <Button variant="outline" size="sm" className="text-red-600 border-red-200">
-                                                                    <Trash2 className="h-4 w-4 mr-1" />
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="text-red-600 border-red-200"
+                                                                    disabled={isLoading}
+                                                                >
+                                                                    {isLoading ? (
+                                                                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                                                    ) : (
+                                                                        <Trash2 className="h-4 w-4 mr-1" />
+                                                                    )}
                                                                     Delete
                                                                 </Button>
                                                             </DialogTrigger>
@@ -492,12 +658,24 @@ export default function JournalingPage() {
                                                                 <DialogHeader>
                                                                     <DialogTitle>Are you sure?</DialogTitle>
                                                                     <DialogDescription>
-                                                                        This action cannot be undone. This will permanently delete your journal entry.
+                                                                        This action cannot be undone. This will permanently delete your journal entry
+                                                                        "{selectedEntry.title}".
                                                                     </DialogDescription>
                                                                 </DialogHeader>
                                                                 <DialogFooter>
-                                                                    <Button variant="destructive" onClick={() => handleDeleteEntry(selectedEntry.id)}>
-                                                                        Delete Entry
+                                                                    <Button
+                                                                        variant="destructive"
+                                                                        onClick={() => handleDeleteEntry(selectedEntry.id)}
+                                                                        disabled={isLoading}
+                                                                    >
+                                                                        {isLoading ? (
+                                                                            <>
+                                                                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                                                                Deleting...
+                                                                            </>
+                                                                        ) : (
+                                                                            "Delete Entry"
+                                                                        )}
                                                                     </Button>
                                                                 </DialogFooter>
                                                             </DialogContent>
@@ -520,7 +698,7 @@ export default function JournalingPage() {
                                             </CardHeader>
                                             <CardContent className="p-6">
                                                 <div className="prose max-w-none text-gray-700">
-                                                    <p className="whitespace-pre-wrap">{selectedEntry.content}</p>
+                                                    <p className="whitespace-pre-wrap leading-relaxed">{selectedEntry.content}</p>
                                                 </div>
                                                 <div className="mt-8 flex flex-wrap gap-1">
                                                     {selectedEntry.tags.map((tag) => (
@@ -560,6 +738,9 @@ export default function JournalingPage() {
                                                         Next
                                                         <ChevronRight className="h-4 w-4 ml-1" />
                                                     </Button>
+                                                </div>
+                                                <div className="text-sm text-gray-500">
+                                                    Entry {entries.findIndex((e) => e.id === selectedEntry.id) + 1} of {entries.length}
                                                 </div>
                                             </CardFooter>
                                         </>

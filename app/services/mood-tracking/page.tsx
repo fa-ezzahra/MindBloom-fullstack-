@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { toast } from "@/components/ui/use-toast"
 import {
   MessageCircle,
   Quote,
@@ -30,18 +31,22 @@ import {
   AlertCircle,
   CheckCircle,
   Brain,
+  Loader2,
 } from "lucide-react"
 
-// Define UserData interface to match JournalingPage
+// Import Supabase services
+import { MoodService, MoodEntry } from "@/lib/supabase"
+
+// Define UserData interface
 interface UserData {
   username: string
-  firstName: string
-  lastName: string
+  firstname: string
+  lastname?: string
   isAuthenticated: boolean
   loginTime: string
 }
 
-// Mock data for mood tracking
+// Mood options configuration
 const moodOptions = [
   { id: "ecstatic", name: "Ecstatic", icon: <Sun className="h-6 w-6" />, color: "bg-yellow-400", value: 5 },
   { id: "happy", name: "Happy", icon: <Smile className="h-6 w-6" />, color: "bg-green-400", value: 4 },
@@ -53,22 +58,16 @@ const moodOptions = [
   { id: "calm", name: "Calm", icon: <Moon className="h-6 w-6" />, color: "bg-teal-400", value: 3 },
 ]
 
-const mockWeeklyData = [
-  { date: subDays(new Date(), 6), mood: "happy", value: 4, notes: "Great day at work!" },
-  { date: subDays(new Date(), 5), mood: "content", value: 3, notes: "Peaceful evening" },
-  { date: subDays(new Date(), 4), mood: "anxious", value: 2, notes: "Stressful meeting" },
-  { date: subDays(new Date(), 3), mood: "sad", value: 2, notes: "Feeling down" },
-  { date: subDays(new Date(), 2), mood: "energetic", value: 4, notes: "Good workout!" },
-  { date: subDays(new Date(), 1), mood: "happy", value: 4, notes: "Fun with friends" },
-  { date: new Date(), mood: "content", value: 3, notes: "Relaxing day" },
-]
-
 export default function MoodTrackingPage() {
   const [currentQuote, setCurrentQuote] = useState(0)
   const [selectedMood, setSelectedMood] = useState<string | null>(null)
-  const [todayMood, setTodayMood] = useState<string | null>("content")
-  const [weeklyData, setWeeklyData] = useState(mockWeeklyData)
+  const [todayMood, setTodayMood] = useState<string | null>(null)
+  const [todayMoodId, setTodayMoodId] = useState<string | null>(null)
+  const [weeklyData, setWeeklyData] = useState<any[]>([])
   const [currentUser, setCurrentUser] = useState<UserData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [moodStats, setMoodStats] = useState<any>(null)
 
   const inspirationalQuotes = [
     "Your feelings are valid, and tracking them is a step toward understanding yourself.",
@@ -79,20 +78,9 @@ export default function MoodTrackingPage() {
     "Your mood today doesn't define you, but tracking it helps you grow.",
   ]
 
-  // Check authentication on load
+  // Check authentication and load data on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedUser = sessionStorage.getItem('currentUser')
-      if (storedUser) {
-        try {
-          const userData = JSON.parse(storedUser)
-          setCurrentUser(userData)
-        } catch (error) {
-          console.error('Error parsing user data:', error)
-          sessionStorage.removeItem('currentUser')
-        }
-      }
-    }
+    initializeData()
   }, [])
 
   // Rotate quotes every 5 seconds
@@ -103,38 +91,216 @@ export default function MoodTrackingPage() {
     return () => clearInterval(interval)
   }, [])
 
+  const initializeData = async () => {
+    setLoading(true)
+
+    // Check authentication
+    if (typeof window !== 'undefined') {
+      const storedUser = sessionStorage.getItem('currentUser')
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser)
+          setCurrentUser(userData)
+
+          // Load user's mood data
+          await loadUserMoodData(userData.username)
+        } catch (error) {
+          console.error('Error parsing user data:', error)
+          sessionStorage.removeItem('currentUser')
+          setLoading(false)
+          return
+        }
+      }
+    }
+
+    setLoading(false)
+  }
+
+  const loadUserMoodData = async (username: string) => {
+    try {
+      // Load today's mood
+      const today = new Date().toISOString().split('T')[0]
+      const { data: todayData } = await MoodService.getMoodEntryByDate(username, today)
+
+      if (todayData) {
+        setTodayMood(todayData.mood_id)
+        setTodayMoodId(todayData.id)
+        setSelectedMood(todayData.mood_id)
+      }
+
+      // Load weekly data (last 7 days)
+      const endDate = new Date().toISOString().split('T')[0]
+      const startDate = subDays(new Date(), 6).toISOString().split('T')[0]
+      const { data: weeklyEntries } = await MoodService.getMoodEntriesRange(username, startDate, endDate)
+
+      // Create weekly data array with all 7 days
+      const weeklyDataArray = []
+      for (let i = 6; i >= 0; i--) {
+        const date = subDays(new Date(), i)
+        const dateStr = date.toISOString().split('T')[0]
+        const entry = weeklyEntries.find(e => e.entry_date === dateStr)
+
+        if (entry) {
+          weeklyDataArray.push({
+            date,
+            mood: entry.mood_id,
+            value: entry.mood_value,
+            notes: entry.notes || "",
+            id: entry.id
+          })
+        } else {
+          weeklyDataArray.push({
+            date,
+            mood: null,
+            value: 0,
+            notes: "",
+            id: null
+          })
+        }
+      }
+
+      setWeeklyData(weeklyDataArray)
+
+      // Load mood statistics
+      const { data: stats } = await MoodService.getMoodStats(username, 30)
+      setMoodStats(stats)
+
+    } catch (error) {
+      console.error('Error loading mood data:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load your mood data. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
+
   const handleMoodSelect = (moodId: string) => {
     setSelectedMood(moodId)
-    setTodayMood(moodId)
-    // In a real app, this would save to database
+  }
+
+  const handleSaveMood = async () => {
+    if (!selectedMood || !currentUser) return
+
+    setSaving(true)
+
+    try {
+      const mood = moodOptions.find(m => m.id === selectedMood)
+      if (!mood) throw new Error('Invalid mood selected')
+
+      const today = new Date().toISOString().split('T')[0]
+
+      if (todayMoodId) {
+        // Update existing entry
+        const { error } = await MoodService.updateMoodEntry(todayMoodId, currentUser.username, {
+          mood_id: selectedMood,
+          mood_name: mood.name,
+          mood_value: mood.value
+        })
+
+        if (error) throw error
+
+        toast({
+          title: "Mood Updated",
+          description: `Your mood has been updated to ${mood.name}.`,
+        })
+      } else {
+        // Create new entry
+        const { data, error } = await MoodService.createMoodEntry(currentUser.username, {
+          mood_id: selectedMood,
+          mood_name: mood.name,
+          mood_value: mood.value,
+          entry_date: today
+        })
+
+        if (error) throw error
+        if (data) setTodayMoodId(data.id)
+
+        toast({
+          title: "Mood Saved",
+          description: `Your mood for today has been saved as ${mood.name}.`,
+        })
+      }
+
+      setTodayMood(selectedMood)
+
+      // Reload data to update statistics
+      await loadUserMoodData(currentUser.username)
+
+    } catch (error) {
+      console.error('Error saving mood:', error)
+      toast({
+        title: "Error",
+        description: "Failed to save your mood. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleLogout = () => {
     sessionStorage.removeItem('currentUser')
     setCurrentUser(null)
+    setTodayMood(null)
+    setSelectedMood(null)
+    setWeeklyData([])
+    setMoodStats(null)
   }
 
   const getWeeklyAverage = () => {
-    const total = weeklyData.reduce((sum, day) => sum + day.value, 0)
-    return (total / weeklyData.length).toFixed(1)
+    const validEntries = weeklyData.filter(day => day.value > 0)
+    if (validEntries.length === 0) return "0.0"
+    const total = validEntries.reduce((sum, day) => sum + day.value, 0)
+    return (total / validEntries.length).toFixed(1)
   }
 
   const getMoodTrend = () => {
-    const firstHalf = weeklyData.slice(0, 3).reduce((sum, day) => sum + day.value, 0) / 3
-    const secondHalf = weeklyData.slice(4).reduce((sum, day) => sum + day.value, 0) / 3
-    return secondHalf > firstHalf ? "improving" : secondHalf < firstHalf ? "declining" : "stable"
+    if (!moodStats) return "stable"
+    return moodStats.trend
   }
 
   const getMostFrequentMood = () => {
-    const moodCounts = weeklyData.reduce(
-      (acc, day) => {
-        acc[day.mood] = (acc[day.mood] || 0) + 1
-        return acc
-      },
-      {} as Record<string, number>,
-    )
+    if (!moodStats || !moodStats.mostCommonMood) return "content"
+    return moodStats.mostCommonMood
+  }
 
-    return Object.entries(moodCounts).reduce((a, b) => (moodCounts[a[0]] > moodCounts[b[0]] ? a : b))[0]
+  const getStreakDays = () => {
+    if (!moodStats) return 0
+    return moodStats.totalEntries
+  }
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-pink-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading your mood data...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show authentication required state
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50 flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Authentication Required</CardTitle>
+            <CardDescription>Please log in to track your mood</CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Link href="/login">
+              <Button className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600">
+                Go to Login
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -164,24 +330,16 @@ export default function MoodTrackingPage() {
               <Link href="/mood-tracking" className="text-pink-600 font-medium">
                 Mood Tracking
               </Link>
-              {currentUser ? (
-                <>
-                  <span className="text-pink-700 font-medium">
-                    Hi, {currentUser.firstName || currentUser.username}! 👋
-                  </span>
-                  <Button
-                    variant="outline"
-                    className="border-pink-200 text-pink-700 hover:bg-pink-50"
-                    onClick={handleLogout}
-                  >
-                    Log Out
-                  </Button>
-                </>
-              ) : (
-                <Button variant="outline" className="border-pink-200 text-pink-700 hover:bg-pink-50">
-                  Log In
-                </Button>
-              )}
+              <span className="text-pink-700 font-medium">
+                Hi, {currentUser.firstname || currentUser.username}! 👋
+              </span>
+              <Button
+                variant="outline"
+                className="border-pink-200 text-pink-700 hover:bg-pink-50"
+                onClick={handleLogout}
+              >
+                Log Out
+              </Button>
             </div>
 
             {/* Mobile Menu Button */}
@@ -256,7 +414,8 @@ export default function MoodTrackingPage() {
                       <button
                         key={mood.id}
                         onClick={() => handleMoodSelect(mood.id)}
-                        className={`p-4 rounded-2xl border-2 transition-all duration-300 hover:scale-105 ${todayMood === mood.id
+                        disabled={saving}
+                        className={`p-4 rounded-2xl border-2 transition-all duration-300 hover:scale-105 disabled:opacity-50 ${selectedMood === mood.id
                           ? "border-pink-500 bg-pink-50 shadow-lg"
                           : "border-gray-200 hover:border-pink-300 bg-white"
                           }`}
@@ -270,10 +429,10 @@ export default function MoodTrackingPage() {
                       </button>
                     ))}
                   </div>
-                  {todayMood && (
+                  {selectedMood && (
                     <div className="mt-6 p-4 bg-pink-50 rounded-lg">
                       <p className="text-pink-800 font-medium">
-                        You're feeling {moodOptions.find((m) => m.id === todayMood)?.name.toLowerCase()} today.
+                        You're feeling {moodOptions.find((m) => m.id === selectedMood)?.name.toLowerCase()} today.
                         Remember, all emotions are valid and temporary.
                       </p>
                     </div>
@@ -282,10 +441,20 @@ export default function MoodTrackingPage() {
                 <CardFooter className="bg-gradient-to-r from-pink-50 to-rose-50 py-4">
                   <Button
                     className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600"
-                    disabled={!selectedMood}
+                    disabled={!selectedMood || saving}
+                    onClick={handleSaveMood}
                   >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Save Today's Mood
+                    {saving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        {todayMood ? "Update Today's Mood" : "Save Today's Mood"}
+                      </>
+                    )}
                   </Button>
                 </CardFooter>
               </Card>
@@ -317,7 +486,7 @@ export default function MoodTrackingPage() {
                   </CardHeader>
                   <CardContent className="pt-4">
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-pink-600 mb-2">7</div>
+                      <div className="text-3xl font-bold text-pink-600 mb-2">{getStreakDays()}</div>
                       <p className="text-sm text-gray-600">Days of tracking</p>
                     </div>
                   </CardContent>
@@ -339,6 +508,8 @@ export default function MoodTrackingPage() {
                   <div className="space-y-4">
                     {weeklyData.map((day, index) => {
                       const mood = moodOptions.find((m) => m.id === day.mood)
+                      const hasEntry = day.mood && day.value > 0
+
                       return (
                         <div
                           key={index}
@@ -346,21 +517,25 @@ export default function MoodTrackingPage() {
                         >
                           <div className="w-12 text-sm font-medium text-gray-600">{format(day.date, "EEE")}</div>
                           <div
-                            className={`w-8 h-8 ${mood?.color} rounded-full flex items-center justify-center text-white flex-shrink-0`}
+                            className={`w-8 h-8 ${hasEntry ? mood?.color : 'bg-gray-200'} rounded-full flex items-center justify-center text-white flex-shrink-0`}
                           >
-                            {mood?.icon}
+                            {hasEntry ? mood?.icon : <Meh className="h-4 w-4 text-gray-400" />}
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center space-x-2">
-                              <span className="font-medium text-gray-800">{mood?.name}</span>
-                              <Badge variant="outline" className="text-xs">
-                                {day.value}/5
-                              </Badge>
+                              <span className="font-medium text-gray-800">
+                                {hasEntry ? mood?.name : "No entry"}
+                              </span>
+                              {hasEntry && (
+                                <Badge variant="outline" className="text-xs">
+                                  {day.value}/5
+                                </Badge>
+                              )}
                             </div>
                             {day.notes && <p className="text-sm text-gray-600 mt-1">{day.notes}</p>}
                           </div>
                           <div className="w-20">
-                            <Progress value={day.value * 20} className="h-2" />
+                            <Progress value={hasEntry ? day.value * 20 : 0} className="h-2" />
                           </div>
                         </div>
                       )
@@ -411,7 +586,9 @@ export default function MoodTrackingPage() {
                   </CardHeader>
                   <CardContent className="pt-4">
                     <div className="text-center">
-                      <div className="text-lg font-medium text-pink-600 capitalize mb-2">{getMostFrequentMood()}</div>
+                      <div className="text-lg font-medium text-pink-600 capitalize mb-2">
+                        {getMostFrequentMood() || "No data"}
+                      </div>
                       <p className="text-sm text-gray-600">Your dominant mood this week</p>
                     </div>
                   </CardContent>
@@ -435,22 +612,30 @@ export default function MoodTrackingPage() {
                     <div className="p-4 bg-pink-50 rounded-lg">
                       <h4 className="font-semibold text-pink-800 mb-2">Pattern Recognition</h4>
                       <p className="text-pink-700 text-sm">
-                        You tend to feel more energetic on weekends and experience lower moods mid-week. Consider
-                        planning enjoyable activities for Wednesday and Thursday.
+                        {moodStats && moodStats.totalEntries > 7
+                          ? `Based on your ${moodStats.totalEntries} days of tracking, you tend to have consistent mood patterns. Keep monitoring to identify specific triggers and positive influences.`
+                          : "Continue tracking for at least a week to identify your personal mood patterns and triggers."
+                        }
                       </p>
                     </div>
                     <div className="p-4 bg-rose-50 rounded-lg">
                       <h4 className="font-semibold text-rose-800 mb-2">Improvement Suggestion</h4>
                       <p className="text-rose-700 text-sm">
-                        Your mood shows improvement when you track consistently. Keep up the daily check-ins to maintain
-                        awareness of your emotional patterns.
+                        {getMoodTrend() === "improving"
+                          ? "Your mood is trending upward! Whatever you're doing is working well. Consider noting what positive changes you've made recently."
+                          : getMoodTrend() === "declining"
+                            ? "Your mood has been declining recently. Consider reaching out to friends, practicing self-care, or speaking with a healthcare provider if this continues."
+                            : "Your mood has been stable, which indicates good emotional regulation. Keep up your current wellness practices."
+                        }
                       </p>
                     </div>
                     <div className="p-4 bg-purple-50 rounded-lg">
-                      <h4 className="font-semibold text-purple-800 mb-2">Positive Trend</h4>
+                      <h4 className="font-semibold text-purple-800 mb-2">Data Insights</h4>
                       <p className="text-purple-700 text-sm">
-                        Your overall mood has been stable this week with moments of happiness. This indicates good
-                        emotional regulation skills.
+                        {moodStats
+                          ? `Your average mood score is ${moodStats.average}/5. You've been most frequently feeling ${getMostFrequentMood()}. Consistency in tracking helps identify what contributes to your well-being.`
+                          : "Start tracking daily to build a comprehensive picture of your emotional patterns and well-being."
+                        }
                       </p>
                     </div>
                   </div>

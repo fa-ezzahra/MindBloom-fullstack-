@@ -21,6 +21,9 @@ import {
   LogOut,
 } from "lucide-react"
 
+// Import the CBTChatbot component if you want to use it directly on this page
+// import CBTChatbot from "@/components/CBTChatbot"
+
 interface UserData {
   username: string
   firstName: string
@@ -213,6 +216,15 @@ export default function HomePage() {
               <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-8">
                 Ready to continue your mental wellness journey? Explore our services and tools designed to support your growth and healing.
               </p>
+              {/* Floating CBT Chatbot Robot - Only after login */}
+              <Link href="/services/cbt-chatbot" className="absolute bottom-0 right-0 md:right-10 mb-8 md:mb-12 flex flex-col items-center">
+                <div className="group flex items-center justify-center bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-full w-20 h-20 shadow-xl hover:shadow-2xl hover:scale-125 transition-all duration-300 animate-float animate-pulse">
+                  <Bot className="h-12 w-12 group-hover:animate-bounce" />
+                </div>
+                <span className="mt-2 text-sm font-bold text-center bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                  Talk to a CBT-trained Chatbot
+                </span>
+              </Link>
             </>
           ) : (
             <>
@@ -245,15 +257,6 @@ export default function HomePage() {
                   </Button>
                 </Link>
               </div>
-              {/* Floating CBT Chatbot Robot */}
-              <Link href="/services/cbt-chatbot" className="absolute bottom-0 right-0 md:right-10 mb-8 md:mb-12 flex flex-col items-center">
-                <div className="group flex items-center justify-center bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-full w-20 h-20 shadow-xl hover:shadow-2xl hover:scale-125 transition-all duration-300 animate-float animate-pulse">
-                  <Bot className="h-12 w-12 group-hover:animate-bounce" />
-                </div>
-                <span className="mt-2 text-sm font-bold text-center bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-                  Talk to a CBT-trained Chatbot
-                </span>
-              </Link>
             </>
           )}
         </div>
